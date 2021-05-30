@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recorder Sound</title>
+    <style>
+        body{
+            background-color: black;
+        }
+        #content{
+            position: fixed;top: 0;bottom: 0;right: 0;left: 0;
+        }
+        #section_1{
+            height: 300px;position: absolute;bottom: 200px;width: 100%;
+        }
+        #section_2{
+            height: 100px;background-color: white;width: 100%;position: absolute;bottom: 0;overflow: hidden;
+        }
+        #stop_gif{
+            display: none;
+        }
+        #stop_gif img{
+            height: 300px;width: auto;
+        }
+        #stop_gif p{
+            color: #00f0c5;font-family: 'B Yekan';font-size: 18px;
+        }
+        #start_gif{
+            display: none;overflow: hidden;position: relative;
+        }
+        #start_gif img{
+            height: 300px;width: auto;
+        }
+        #start_gif p{
+            color: #f34348;font-family: 'B Yekan';font-size: 18px;
+        }
+        #start_gif div{
+            height: 70px;background-color: black;position: absolute;top: 220px;width: 100%;
+        }
+        #start_button{
+            height: 50px;width: 300px;cursor: pointer;background: linear-gradient(to left,#0f0c29,#302b63,#24243e);box-shadow: 0 8px  16px 0 rgba(0,0,0,.4);margin-top: 25px;border-radius: 10px;text-align: center;
+        }
+        #stop_button{
+            display: none;height: 50px;width: 300px;cursor: pointer;background: linear-gradient(to left,#0f0c29,#302b63,#24243e);box-shadow: 0 8px  16px 0 rgba(0,0,0,.4);margin-top: 25px;border-radius: 10px;text-align: center;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+</head>
+<body>
+
+<div id="content">
+    <div id="section_1">
+        <center id="stop_gif">
+            <img src="ok.gif" alt="not found">
+            <p>ضبط با موفقیت انجام شد</p>
+        </center>
+        <center id="start_gif">
+            <img src="min.gif" alt="not found">
+            <div></div>
+            <p>در حال ضبط کردن</p>
+        </center>
+    </div>
+    <div id="section_2">
+        <center>
+            <div id="start_button">
+                <center>
+                    <div style="width: 55%;display: inline;float: left;text-align: right">
+                        <p style="font-family: 'B Yekan';color: white;margin-top: 15px;">ضبط کردن</p>
+                    </div>
+                    <div style="width: 45%;display: inline;float: left;text-align: left;">
+                        <img src="button.png" alt="not found" style="height: 20px;width: 20px;margin-top: 15px;margin-left: 10px;">
+                    </div>
+
+                </center>
+
+
+
+            </div>
+
+            <div id="stop_button">
+                <center>
+                    <div style="width: 50%;display: inline;float: left;text-align: right">
+                        <p style="font-family: 'B Yekan';color: white;margin-top: 15px;">توقف</p>
+                    </div>
+                    <div style="width: 50%;display: inline;float: left;text-align: left;">
+                        <img src="button.png" alt="not found" style="height: 20px;width: 20px;margin-top: 15px;margin-left: 10px;">
+                    </div>
+
+                </center>
+
+
+
+            </div>
+        </center>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#start_button").click(function () {
+            startRecord();
+            $(this).hide();
+            $("#stop_button").show('fade');
+            $("#start_gif").show('fade');
+        });
+        function startRecord() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    const mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+
+                    const audioChunks = [];
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+
+
+
+
+                    $("#stop_button").click(function () {
+                        stream.getTracks() // get all tracks from the MediaStream
+                            .forEach( track => track.stop() );
+                        mediaRecorder.stop();
+                        $(this).hide();
+                        $("#start_button").show('fade');
+                        $("#start_gif").hide();
+                        $("#stop_gif").show('fade');
+                        setTimeout(function () {
+                            $("#stop_gif").hide('fade');
+                        },4000)
+                    });
+
+                    mediaRecorder.addEventListener("stop", () => {
+                        const audioBlob = new Blob(audioChunks);
+                        createDownloadLink(audioBlob);
+
+                    });
+                });
+
+
+        }
+
+
+
+
+        function createDownloadLink(blob) {
+
+
+            var reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = function() {
+                var base64data = reader.result;
+
+
+                var file = dataURLtoFile(base64data,Date.now()+'.wav');
+
+
+                var data = new FormData();
+                data.append('voice', file,file.name);
+                $.ajax({
+                    url: 'uploadVoice.php',
+                    type:'POST',
+                    data: data,
+                    contentType: false,
+                    processData: false,
+                    success: function(data){
+                    },
+                    error:function (err) {
+                    }
+                });
+            }
+
+        }
+
+        function dataURLtoFile(dataurl, filename) {
+
+            var arr = dataurl.split(','),
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]),
+                n = bstr.length,
+                u8arr = new Uint8Array(n);
+
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+
+            return new File([u8arr], filename, {type:mime});
+        }
+    });
+</script>
+</body>
+</html>
